@@ -39,7 +39,7 @@ test("different text in the same box produces identical layout images", async ()
     text = "Other text";
     await capturePage({ page }, target, { path: "/", ready: "#ready" }, 200, 100, path.join(directory, "b.png"), 5000);
     const images = ["a", "b"].map(name => PNG.sync.read(readFileSync(path.join(directory, `${name}.layout.png`))));
-    assert.deepEqual(findRegions(...images), []);
+    assert.deepEqual(await findRegions(...images), []);
   } finally {
     await browser.close();
     rmSync(directory, { recursive: true, force: true });

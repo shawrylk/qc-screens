@@ -1,8 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { importConsumerPackage } from "../consumer-package.mjs";
-const { PNG } = await importConsumerPackage("pngjs");
 import { targetSession } from "./stack-auth.mjs";
 import { compareImages, gallery, sortReport } from "./compare.mjs";
 import { stableCapture, findRegions, regionCrop, boxPair } from "./regions.mjs";
@@ -77,6 +75,7 @@ export async function capturePage(session, target, route, width, height, file, t
   await page.evaluate(() => document.fonts.ready);
   const inventory = await collectInventory(page, [...(route.masks ?? []), ...(route.exclude ?? [])]);
   writeJson(file.replace(/\.png$/, ".inventory.json"), inventory);
+  const { PNG } = await import("pngjs");
   const capture = () => page.screenshot({ animations: "disabled", caret: "hide", fullPage: false, mask: (route.masks ?? []).map(selector => page.locator(selector)), maskColor: "#808080", timeout }).then(buffer => PNG.sync.read(buffer));
   const full = await stableCapture(capture);
   writeFileSync(file, PNG.sync.write(full.image));
@@ -91,6 +90,7 @@ export async function capturePage(session, target, route, width, height, file, t
 
 /** Pipeline: authenticate, capture each viewport, compare, and publish the gallery. */
 export async function captureScreens(map, options, { chromium, say = console.error, sessionFactory = targetSession } = {}) {
+  const { PNG } = await import("pngjs");
   const { targets, out, only, changed, timeout = 15000, signInTimeout = 180000, height = 900, allowWrites = false } = options;
   if (targets.length !== 2 || targets.some(name => !map.targets[name])) throw new Error("Choose two targets from the map");
   if (changed && !targets.includes(changed)) throw new Error("--changed must name one of the two targets");
@@ -141,17 +141,17 @@ export async function captureScreens(map, options, { chromium, say = console.err
       const error = failures.get(`${screen.name}@${width}`);
       if (error) { fresh.push({ screen: screen.name, width, targets, error, regions: [], inventoryFindings: [] }); continue; }
       const images = targets.map(name => PNG.sync.read(readFileSync(path.join(out, screen.name, `${name}@${width}.png`))));
-      const { pair, ...diff } = compareImages(...images);
+      const { pair, ...diff } = await compareImages(...images);
       const layouts = targets.map(name => PNG.sync.read(readFileSync(path.join(out, screen.name, `${name}@${width}.layout.png`))));
       const unstable = new PNG({ width: layouts[0].width, height: layouts[0].height });
       for (const name of targets) {
         const mask = PNG.sync.read(readFileSync(path.join(out, screen.name, `${name}@${width}.unstable.png`)));
         for (let i = 3; i < mask.data.length; i += 4) if (mask.data[i]) unstable.data.set([255, 0, 0, 255], i - 3);
       }
-      const regions = findRegions(...layouts, { unstable: [unstable] });
+      const regions = await findRegions(...layouts, { unstable: [unstable] });
       for (const region of regions) {
         region.crop = `${screen.name}/region-${region.id}@${width}.png`;
-        writeFileSync(path.join(out, region.crop), PNG.sync.write(regionCrop(...images, region.box)));
+        writeFileSync(path.join(out, region.crop), PNG.sync.write(await regionCrop(...images, region.box)));
       }
       const inventories = targets.map(name => readJson(path.join(out, screen.name, `${name}@${width}.inventory.json`), []));
       const inventoryFindings = diffInventory(...inventories);
@@ -159,7 +159,7 @@ export async function captureScreens(map, options, { chromium, say = console.err
         finding.id += regions.length;
         finding.box = inventoryBox(finding, images[0].width, images[0].height);
         finding.crop = `${screen.name}/inventory-${finding.id}@${width}.png`;
-        writeFileSync(path.join(out, finding.crop), PNG.sync.write(regionCrop(...images, finding.box)));
+        writeFileSync(path.join(out, finding.crop), PNG.sync.write(await regionCrop(...images, finding.box)));
       }
       const relative = `${screen.name}/pair@${width}.png`;
       writeFileSync(path.join(out, relative), PNG.sync.write(boxPair(pair, [...regions, ...inventoryFindings])));

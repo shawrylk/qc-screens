@@ -1,8 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { importConsumerPackage } from "../consumer-package.mjs";
-const { PNG } = await importConsumerPackage("pngjs");
 import { requireLocalhost } from "./map.mjs";
 import { targetSession } from "./stack-auth.mjs";
 import { privateRoot } from "./auth.mjs";
@@ -21,7 +19,8 @@ export const fixturePlan = [
 ];
 
 /** Resource: deterministic upload files need neither downloads nor app secrets. */
-export function fixtureAssets(root) {
+export async function fixtureAssets(root) {
+  const { PNG } = await import("pngjs");
   mkdirSync(root, { recursive: true });
   const photo = new PNG({ width: 120, height: 80 });
   for (let y = 0; y < photo.height; y++) for (let x = 0; x < photo.width; x++) photo.data.set([x < 60 ? 32 : 200, 100, y < 40 ? 220 : 80, 255], (y * photo.width + x) * 4);
@@ -49,7 +48,7 @@ export async function setupLocal(target, targetName, { chromium, adapter, stateR
   mkdirSync(stateRoot, { recursive: true, mode: 0o700 });
   const file = path.join(stateRoot, `fixtures-${targetName}.json`);
   const fixtures = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
-  const assets = fixtureAssets(path.join(stateRoot, "fixture-assets"));
+  const assets = await fixtureAssets(path.join(stateRoot, "fixture-assets"));
   const session = await sessionFactory(chromium, target, { timeout, signInTimeout, targetName, allowWrites: true, say });
   try {
     const { page, context } = session;
