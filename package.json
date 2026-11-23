@@ -1,0 +1,49 @@
+{
+  "name": "qc-screens",
+  "version": "0.1.0",
+  "description": "Screen capture and visual comparison with Playwright",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "qc-screens": "./src/cli/qc-screens.mjs"
+  },
+  "exports": {
+    "./stack-auth": "./src/screens/stack-auth.mjs"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test \"src/**/*.test.mjs\"",
+    "test:browser": "node --test \"src/**/*.browser-test.mjs\"",
+    "spec:check": "qc check"
+  },
+  "dependencies": {
+    "qc-stack": "github:shawrylk/qc-stack#e34c270d92e3995b2e512f6eb690ea3cb0bc4699"
+  },
+  "peerDependencies": {
+    "pixelmatch": ">=8",
+    "playwright": ">=1.64",
+    "pngjs": ">=7"
+  },
+  "peerDependenciesMeta": {
+    "pixelmatch": {
+      "optional": true
+    },
+    "playwright": {
+      "optional": true
+    },
+    "pngjs": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "pixelmatch": "^8.0.0",
+    "playwright": "^1.64.1",
+    "pngjs": "^7.0.0"
+  },
+  "repository": "git+https://github.com/shawrylk/qc-screens.git"
+}
