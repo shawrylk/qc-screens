@@ -98,8 +98,7 @@ export async function refreshStackSessions(stack) {
       return current;
     });
     if (!record) continue;
-    const { importConsumerPackage } = await import("../consumer-package.mjs");
-    const { chromium } = await importConsumerPackage("playwright");
+    const { chromium } = await import("playwright");
     const target = { ...record.target, auth: { ...record.target.auth, path: "/bff/login?returnTo=%2Fprojects" } };
     const session = await targetSession(chromium, target, { timeout: 15000, signInTimeout: 180000, allowInteractive: false });
     await session.close();

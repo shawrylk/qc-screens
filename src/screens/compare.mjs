@@ -1,9 +1,6 @@
-import { importConsumerPackage } from "../consumer-package.mjs";
-const { default: pixelmatch } = await importConsumerPackage("pixelmatch");
-const { PNG } = await importConsumerPackage("pngjs");
-
 /** Pipeline: normalize dimensions and paint changed pixels over the right image. */
-export function compareImages(left, right) {
+export async function compareImages(left, right) {
+  const [{ default: pixelmatch }, { PNG }] = await Promise.all([import("pixelmatch"), import("pngjs")]);
   const width = Math.max(left.width, right.width);
   const height = Math.max(left.height, right.height);
   const padded = [left, right].map(source => {

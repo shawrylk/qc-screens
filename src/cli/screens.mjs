@@ -1,5 +1,4 @@
 import path from "node:path";
-import { importConsumerPackage } from "../consumer-package.mjs";
 import { parseArgs } from "node:util";
 import { loadMap } from "../screens/map.mjs";
 import { captureScreens } from "../screens/capture.mjs";
@@ -36,14 +35,16 @@ export async function runScreens(argv, { say = console.error, sessionFactory = t
       for (const item of map.screens) say(`${item.name}\t${Object.keys(item.targets).join(", ")}`);
       return 0;
     }
-    const { chromium } = await importConsumerPackage("playwright");
+    if (["pair", "coverage", "scaffold"].includes(command)) return await runDiscovery(command, map, values, { say });
+    if (!["setup", "discover", "auth", "open", "run"].includes(command)) throw new Error(`Unknown screens command ${command}`);
+    const { chromium } = await import("playwright");
     if (command === "setup") {
       const target = map.targets[values.target];
       if (!target) throw new Error("Choose --target from the map");
       say(JSON.stringify(await setupLocal(target, values.target, { chromium, timeout: Number(values.timeout ?? 15000), signInTimeout: Number(values["sign-in-timeout"] ?? 180000), say })));
       return 0;
     }
-    if (["discover", "pair", "coverage", "scaffold"].includes(command)) return await runDiscovery(command, map, values, { chromium, say });
+    if (command === "discover") return await runDiscovery(command, map, values, { chromium, say });
     const timeout = Number(values.timeout ?? 15000);
     const signInTimeout = Number(values["sign-in-timeout"] ?? 180000);
     if (authCommand) {
@@ -76,7 +77,6 @@ export async function runScreens(argv, { say = console.error, sessionFactory = t
       } finally { await session.close().catch(() => {}); }
       return 0;
     }
-    if (command !== "run") throw new Error(`Unknown screens command ${command}`);
     if (!values.targets || !values.out) throw new Error("--targets and --out are required");
     const report = await captureScreens(map, { targets: values.targets.split(",").map(name => name.trim()), out: path.resolve(values.out), only: positionals.length ? positionals.join(",") : values.only, changed: values.changed, height: Number(values.height ?? 900), timeout, signInTimeout, allowWrites: values["allow-writes"] === true }, { chromium, say });
     for (const row of report) say(JSON.stringify(row));

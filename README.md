@@ -4,18 +4,14 @@ Capture and compare screenshots across application targets with Playwright. A sc
 
 ## Run
 
-Use Node.js 24 and install Google Chrome for browser commands. Install the screen packages in the project that contains the screen map.
-
-```sh
-npm install -D playwright pixelmatch pngjs
-```
+Use Node.js 24 and install Google Chrome for browser commands. npm installs the screen packages with qc-screens.
 
 Replace `<sha>` with a commit SHA from this repository. If npm blocks Git dependencies, set `npm_config_allow_git=all` in your environment.
 
 ```sh
-npx --yes github:shawrylk/qc-screens#<sha> --help
-npx --yes github:shawrylk/qc-screens#<sha> list --map screens.json
-npx --yes github:shawrylk/qc-screens#<sha> --map screens.json --targets local,staging --out screenshots
+npx --yes -p github:shawrylk/qc-screens#<sha> qc-screens --help
+npx --yes -p github:shawrylk/qc-screens#<sha> qc-screens list --map screens.json
+npx --yes -p github:shawrylk/qc-screens#<sha> qc-screens --map screens.json --targets local,staging --out screenshots
 ```
 
 This tool came from [architecture-kit at `7883543`](https://github.com/shawrylk/architecture-kit/tree/7883543/packages/qc-harness).

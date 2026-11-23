@@ -1,9 +1,6 @@
-import { importConsumerPackage } from "../consumer-package.mjs";
-const { default: pixelmatch } = await importConsumerPackage("pixelmatch");
-const { PNG } = await importConsumerPackage("pngjs");
-
-function difference(a, b) {
+async function difference(a, b) {
   if (a.width !== b.width || a.height !== b.height) throw new Error("Capture dimensions differ");
+  const [{ default: pixelmatch }, { PNG }] = await Promise.all([import("pixelmatch"), import("pngjs")]);
   const mask = new PNG({ width: a.width, height: a.height });
   pixelmatch(a.data, b.data, mask.data, a.width, a.height, { threshold: 0.1, includeAA: true, diffMask: true });
   return mask;
@@ -14,7 +11,7 @@ export async function stableCapture(capture) {
   for (let attempt = 0; attempt <= 3; attempt++) {
     const first = await capture();
     const image = await capture();
-    const mask = difference(first, image);
+    const mask = await difference(first, image);
     if (!mask.data.some((value, index) => index % 4 === 3 && value)) return { image, unstable: null };
     if (attempt === 3) return { image, unstable: mask };
   }
@@ -80,9 +77,9 @@ function shifted(a, b, box) {
 }
 
 /** Pipeline: dilate differences on a grid, join components, and classify layout findings. */
-export function findRegions(left, right, { unstable = [], gap = 6 } = {}) {
-  const mask = difference(left, right);
-  const instability = unstable.length === 2 && unstable[0]?.width ? difference(...unstable) : unstable.filter(Boolean)[0];
+export async function findRegions(left, right, { unstable = [], gap = 6 } = {}) {
+  const mask = await difference(left, right);
+  const instability = unstable.length === 2 && unstable[0]?.width ? await difference(...unstable) : unstable.filter(Boolean)[0];
   const unstableBoxes = instability ? components(instability, gap) : [];
   if (instability) for (let i = 3; i < mask.data.length; i += 4) if (instability.data[i]) mask.data[i] = 0;
   const regions = components(mask, gap).map(box => {
@@ -107,11 +104,12 @@ export function findRegions(left, right, { unstable = [], gap = 6 } = {}) {
 }
 
 /** Fragment: show baseline, comparison, and pixel difference with padding and nearest-neighbor scaling. */
-export function regionCrop(left, right, box, padding = 8) {
+export async function regionCrop(left, right, box, padding = 8) {
+  const { PNG } = await import("pngjs");
   const x = Math.max(0, box.x - padding), y = Math.max(0, box.y - padding);
   const width = Math.min(left.width, box.x + box.width + padding) - x;
   const height = Math.min(left.height, box.y + box.height + padding) - y;
-  const diff = difference(left, right);
+  const diff = await difference(left, right);
   const scale = Math.max(1, Math.ceil(600 / (width * 3)));
   const crop = new PNG({ width: width * 3 * scale, height: height * scale });
   [left, right, diff].forEach((source, panel) => {
